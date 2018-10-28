@@ -1,6 +1,18 @@
-from Qt import QtWidgets
+from Qt import QtWidgets, QtCore
 
 from handler import LogbookHandler
+
+
+class Worker(QtCore.QRunnable):
+    def __init__(self, func, *func_args, **func_kwargs):
+        super(Worker, self).__init__()
+        self.func = func
+        self.func_args = func_args
+        self.func_kwargs = func_kwargs
+
+    @QtCore.Slot()
+    def run(self):
+        return self.func(*self.func_args, **self.func_kwargs)
 
 
 class LogbookWidget(QtWidgets.QWidget):
@@ -21,9 +33,11 @@ class LogbookWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(LogbookWidget, self).__init__(parent)
 
+        self._threadpool = QtCore.QThreadPool()
         self._filter_regex = ".*"
         self._setup_ui()
-        self._setup_connections()
+
+        self.handler.signals.signal_record.connect(self.add_record)
 
     def _setup_ui(self):
         h_separator = QtWidgets.QFrame()
@@ -61,7 +75,6 @@ class LogbookWidget(QtWidgets.QWidget):
         background_highlight_toggle = QtWidgets.QCheckBox("Coloring")
         level_buttons_layout.addWidget(background_highlight_toggle)
 
-
         level_buttons_layout.addStretch()
 
         options_layout.addWidget(h_separator)
@@ -85,21 +98,24 @@ class LogbookWidget(QtWidgets.QWidget):
         records_layout = QtWidgets.QVBoxLayout()
         records_group.setLayout(records_layout)
 
-        records_list = QtWidgets.QListWidget()
-        records_list.setStyleSheet("""QWidget {border: none} """)
-        records_layout.addWidget(records_list)
+        self.records_list = QtWidgets.QListWidget()
+        self.records_list.setStyleSheet("""QWidget {border: none} """)
+        records_layout.addWidget(self.records_list)
 
         clear_records_button = QtWidgets.QPushButton("Clear Records")
         clear_records_button.setFixedWidth(90)
 
         records_layout.addWidget(clear_records_button)
 
-    def _setup_connections(self):
-        self.handler.signals.signal_record.connect(self._add_record)
-
-    def _add_record(self, log_record):
+    def add_record(self, log_record):
         """ adds a LogRecord object to the records list widget"""
-        print log_record
+
+        def _wrap():
+            item = QtWidgets.QListWidgetItem(log_record.msg)
+            self.records_list.addItem(item)
+
+        worker = Worker(_wrap)
+        self._threadpool.start(worker)
 
     @property
     def handler(self):
@@ -108,15 +124,21 @@ class LogbookWidget(QtWidgets.QWidget):
 
 if __name__ == '__main__':
     import logging
+    from multiprocessing.pool import ThreadPool
+    pool = ThreadPool(1)
+
+    def emit(*args):
+        for i in range(100):
+            LOG.info("%s" % i)
 
     application = QtWidgets.QApplication([])
     logbook = LogbookWidget()
     logbook.show()
 
     LOG = logging.getLogger("test")
-    logging.basicConfig(level=logging.DEBUG)
+    LOG.setLevel(logging.INFO)
 
     LOG.addHandler(logbook.handler)
-    LOG.info("Hello Logbook")
+    pool.map(emit, range(1))
 
     application.exec_()
