@@ -3,7 +3,10 @@ import logging
 from collections import OrderedDict
 from functools import partial
 
-from Qt import QtWidgets, QtCore
+from Qt import (QtGui,
+                QtWidgets,
+                QtCore
+                )
 
 from handler import LogbookHandler
 
@@ -129,8 +132,8 @@ class LogbookWidget(QtWidgets.QWidget):
 
         level_buttons_layout.addWidget(v_separator)
 
-        background_highlight_toggle = QtWidgets.QCheckBox("Coloring")
-        level_buttons_layout.addWidget(background_highlight_toggle)
+        self.background_coloring_checkbox = QtWidgets.QCheckBox("Coloring")
+        level_buttons_layout.addWidget(self.background_coloring_checkbox)
 
         level_buttons_layout.addStretch()
 
@@ -171,16 +174,32 @@ class LogbookWidget(QtWidgets.QWidget):
                 partial(self._on_level_button_toggled, level_button)
             )
         self.clear_records_button.clicked.connect(self.records_list.clear)
+        self.background_coloring_checkbox.toggled.connect(self._toggle_coloring)
 
     def _on_level_button_toggled(self, button, state):
         """ handles show states of LogRecordItems """
-        for row in xrange(self.records_list.count()):
-            item = self.records_list.item(row)
+        for item in self._record_items:
             if item.level == button.property("level_name"):
                 if state:
                     self.records_list.setItemHidden(item, False)
                 else:
                     self.records_list.setItemHidden(item, True)
+
+    def _toggle_coloring(self, state):
+        """ activates or deactivates background coloring for record items """
+        colors = {k: QtGui.QColor(*v) for k, v in self.LEVEL_COLORS.items()}
+
+        for item in self._record_items:
+            if state:
+                item.setBackgroundColor(colors[item.level])
+            else:
+                item.setBackgroundColor(QtGui.QColor(0, 0, 0, 0))
+
+    @property
+    def _record_items(self):
+        """ all available record items """
+        for row in xrange(self.records_list.count()):
+            yield self.records_list.item(row)
 
     def add_record(self, log_record):
         """ adds a LogRecord object to the records list widget"""
@@ -195,6 +214,14 @@ class LogbookWidget(QtWidgets.QWidget):
 
     @property
     def handler(self):
+        """ THE handler somebody has to add to the logger he wants to catch messages for.
+
+        Examples:
+            >>> import logging
+            >>> my_logger = logging.getLogger("cool.stuff")
+            >>> logbook = LogbookWidget()
+            >>> my_logger.addHandler(logbook.handler)
+        """
         return self._handler
 
 
@@ -211,7 +238,7 @@ if __name__ == '__main__':
         for i in range(3):
             LOG.warning("warning %s" % i)
         for i in range(2):
-            LOG.error("error %s", i)
+            LOG.error("error %s" % i)
 
     application = QtWidgets.QApplication([])
     logbook = LogbookWidget()
