@@ -1,5 +1,7 @@
 from Qt import QtWidgets
 
+from handler import LogbookHandler
+
 
 class LogbookWidget(QtWidgets.QWidget):
     """ A simple widget that makes log reading more pleasant. """
@@ -13,14 +15,17 @@ class LogbookWidget(QtWidgets.QWidget):
     }
     LABEL_WIDTH = 70
     LEVEL_BUTTON_WIDTH = 60
+    
+    _handler = LogbookHandler()
 
     def __init__(self, parent=None):
         super(LogbookWidget, self).__init__(parent)
 
         self._filter_regex = ".*"
-        self._build_ui()
+        self._setup_ui()
+        self._setup_connections()
 
-    def _build_ui(self):
+    def _setup_ui(self):
         h_separator = QtWidgets.QFrame()
         h_separator.setFrameStyle(QtWidgets.QFrame.HLine | QtWidgets.QFrame.Raised)
         v_separator = QtWidgets.QFrame()
@@ -76,7 +81,7 @@ class LogbookWidget(QtWidgets.QWidget):
         records_group = QtWidgets.QGroupBox("Records")
         container_layout.addWidget(records_group)
 
-        # === records list
+        # === records list ===
         records_layout = QtWidgets.QVBoxLayout()
         records_group.setLayout(records_layout)
 
@@ -89,9 +94,29 @@ class LogbookWidget(QtWidgets.QWidget):
 
         records_layout.addWidget(clear_records_button)
 
+    def _setup_connections(self):
+        self.handler.signals.signal_record.connect(self._add_record)
+
+    def _add_record(self, log_record):
+        """ adds a LogRecord object to the records list widget"""
+        print log_record
+
+    @property
+    def handler(self):
+        return self._handler
 
 
-application = QtWidgets.QApplication([])
-x = LogbookWidget()
-x.show()
-application.exec_()
+if __name__ == '__main__':
+    import logging
+
+    application = QtWidgets.QApplication([])
+    logbook = LogbookWidget()
+    logbook.show()
+
+    LOG = logging.getLogger("test")
+    logging.basicConfig(level=logging.DEBUG)
+
+    LOG.addHandler(logbook.handler)
+    LOG.info("Hello Logbook")
+
+    application.exec_()
