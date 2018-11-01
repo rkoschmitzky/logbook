@@ -1,6 +1,7 @@
 import logging
 
 from collections import OrderedDict
+from difflib import context_diff
 from functools import partial
 
 from Qt import (QtGui,
@@ -78,11 +79,84 @@ class LogbookWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(LogbookWidget, self).__init__(parent)
 
+        # if somebody wants to customize the levels ensure he does it properly
+        # to avoid issues downstream
+        self._validate_levels()
+
         self._threadpool = QtCore.QThreadPool()
         self._filter_regex = ".*"
         self._colors = {k: QtGui.QColor(*v) for k, v in self.LEVEL_COLORS.items()}
         self._setup_ui()
         self._setup_signals()
+
+    @classmethod
+    def _validate_levels(cls):
+        """ ensure we allow flexible level addition but give proper guidance """
+        _missing_key_msg = "Missing key '{}' in '{}' attribute."
+        _keys_number_msg = "Level name entries in '{}' attribute not matching: \n {}."
+        _type_msg = "Given level for level name '{}' must be of type {}. Got {}."
+        _invalid_rgba_msg = "Given value {} is not a proper RGB(A) color using values 0-255[0-100]."
+
+        # check for equal keys
+        _level_names_sorted = sorted(cls.LOG_LEVELS)
+        _level_values_keys_sorted = sorted(cls.LEVEL_VALUES.keys())
+        _level_colors_keys_sorted = sorted(cls.LEVEL_COLORS.keys())
+        if _level_names_sorted != _level_values_keys_sorted:
+            raise ValueError(_keys_number_msg.format(
+                "LEVEL_VALUES",
+                # todo: maybe not helpful enough
+                "".join(context_diff(_level_names_sorted, _level_values_keys_sorted))
+                )
+            )
+        if _level_names_sorted != _level_colors_keys_sorted:
+            raise ValueError(_keys_number_msg.format(
+                "LEVEL_COLORS",
+                "".join(context_diff(_level_names_sorted, _level_colors_keys_sorted))
+                )
+            )
+
+        for level_name in cls.LOG_LEVELS:
+            if level_name not in cls.LEVEL_VALUES:
+                raise KeyError(_missing_key_msg.format(level_name, "LEVEL_VALUES"))
+            if level_name not in cls.LEVEL_COLORS:
+                raise KeyError(_missing_key_msg.format(level_name, "LEVEL_COLORS"))
+            
+            # check log level values
+            if not isinstance(cls.LEVEL_VALUES[level_name], int):
+                raise TypeError(_type_msg.format(
+                        level_name,
+                        "int",
+                        type(cls.LEVEL_VALUES[level_name])
+                    )
+                )
+            if cls.LEVEL_VALUES[level_name] < 1:
+                raise ValueError("A log level for level name '{}' must be defined with a value <= 1.".format(
+                        level_name    
+                    )
+                )
+            # check log level colors
+            if not isinstance(cls.LEVEL_COLORS[level_name], (list, tuple)):
+                raise TypeError(_type_msg.format(
+                        level_name,
+                        "tuple or int",
+                        type(cls.LEVEL_COLORS[level_name])
+                    )
+                )
+            
+            # check RGBA values
+            if [True, True, True] != [_ >= 0 and _ <= 255 for _ in cls.LEVEL_COLORS[level_name][:3]]:
+                raise ValueError(_invalid_rgba_msg.format(
+                    cls.LEVEL_COLORS[level_name]
+                    )
+                )
+            if len(cls.LEVEL_COLORS[level_name]) == 4:
+                if cls.LEVEL_COLORS[level_name][-1] <= 0 or cls.LEVEL_COLORS[level_name][-1] > 100:
+                    raise ValueError(_invalid_rgba_msg.format(
+                        cls.LEVEL_COLORS[level_name]
+                        )
+                    )
+            elif len(cls.LEVEL_COLORS[level_name]) > 4:
+                raise ValueError(_invalid_rgba_msg.format(cls.LEVEL_COLORS[level_name]))
 
     def _setup_ui(self):
         h_separator = QtWidgets.QFrame()
