@@ -72,7 +72,7 @@ class LogbookWidget(QtWidgets.QWidget):
 
     LABEL_WIDTH = 70
     LEVEL_BUTTON_WIDTH = 60
-    
+
     _handler = LogbookHandler()
 
     def __init__(self, parent=None):
@@ -80,6 +80,7 @@ class LogbookWidget(QtWidgets.QWidget):
 
         self._threadpool = QtCore.QThreadPool()
         self._filter_regex = ".*"
+        self._colors = {k: QtGui.QColor(*v) for k, v in self.LEVEL_COLORS.items()}
         self._setup_ui()
         self._setup_signals()
 
@@ -168,6 +169,7 @@ class LogbookWidget(QtWidgets.QWidget):
         records_layout.addWidget(self.clear_records_button)
 
     def _setup_signals(self):
+        """ setup all Qt signals """
         self.handler.signals.signal_record.connect(self.add_record)
         for level_button in self.level_buttons:
             level_button.toggled.connect(
@@ -187,13 +189,18 @@ class LogbookWidget(QtWidgets.QWidget):
 
     def _toggle_coloring(self, state):
         """ activates or deactivates background coloring for record items """
-        colors = {k: QtGui.QColor(*v) for k, v in self.LEVEL_COLORS.items()}
-
         for item in self._record_items:
-            if state:
-                item.setBackgroundColor(colors[item.level])
-            else:
-                item.setBackgroundColor(QtGui.QColor(0, 0, 0, 0))
+            self._set_background_color(item)
+
+    def _set_background_color(self, item):
+        """ actives or deactivates background coloring
+        
+        This is based on the check state of the coloring checkbox.
+        """
+        if self.background_coloring_checkbox.isChecked():
+            item.setBackgroundColor(self._colors[item.level])
+        else:
+            item.setBackgroundColor(QtGui.QColor(0, 0, 0, 0))
 
     @property
     def _record_items(self):
@@ -207,7 +214,7 @@ class LogbookWidget(QtWidgets.QWidget):
         def _add_item():
             item = LogRecordItem(log_record)
             self.records_list.addItem(item)
-            self.records_list.scrollToItem(item)
+            self._set_background_color(item)
 
         worker = Worker(_add_item)
         self._threadpool.start(worker)
@@ -227,27 +234,27 @@ class LogbookWidget(QtWidgets.QWidget):
 
 if __name__ == '__main__':
     import logging
+    import time
     from multiprocessing.pool import ThreadPool
     pool = ThreadPool(1)
 
     def emit(*args):
-        for i in range(10):
-            LOG.info("info %s" % i)
         for i in range(5):
-            LOG.debug("debug %s" % i)
-        for i in range(3):
+            LOG.info("info %s" % i)
+        for i in range(1):
             LOG.warning("warning %s" % i)
         for i in range(2):
             LOG.error("error %s" % i)
+        time.sleep(0.3)
 
     application = QtWidgets.QApplication([])
     logbook = LogbookWidget()
     logbook.show()
 
     LOG = logging.getLogger("test")
-    LOG.setLevel(logging.DEBUG)
+    LOG.setLevel(logging.INFO)
 
     LOG.addHandler(logbook.handler)
-    pool.map(emit, range(1))
+    pool.map_async(emit, range(50))
 
     application.exec_()
