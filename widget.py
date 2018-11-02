@@ -3,6 +3,7 @@ import logging
 from collections import OrderedDict
 from difflib import context_diff
 from functools import partial
+import re
 
 from Qt import (QtGui,
                 QtWidgets,
@@ -74,6 +75,8 @@ class LogbookWidget(QtWidgets.QWidget):
     LABEL_WIDTH = 70
     LEVEL_BUTTON_WIDTH = 60
 
+    INITIAL_FILTER_REGEX = r""
+
     _handler = LogbookHandler()
 
     def __init__(self, parent=None):
@@ -83,8 +86,10 @@ class LogbookWidget(QtWidgets.QWidget):
         # to avoid issues downstream
         self._validate_levels()
 
+        self._filter_regex = re.compile(r"{}".format(self.INITIAL_FILTER_REGEX))
+
         self._threadpool = QtCore.QThreadPool()
-        self._filter_regex = ".*"
+        self._filter_regex_compiled = re.compile(self.INITIAL_FILTER_REGEX)
         self._colors = {k: QtGui.QColor(*v) for k, v in self.LEVEL_COLORS.items()}
         self._setup_ui()
         self._setup_signals()
@@ -159,6 +164,7 @@ class LogbookWidget(QtWidgets.QWidget):
                 raise ValueError(_invalid_rgba_msg.format(cls.LEVEL_COLORS[level_name]))
 
     def _setup_ui(self):
+        """ build the actual ui """
         h_separator = QtWidgets.QFrame()
         h_separator.setFrameStyle(QtWidgets.QFrame.HLine | QtWidgets.QFrame.Raised)
         v_separator = QtWidgets.QFrame()
@@ -194,7 +200,7 @@ class LogbookWidget(QtWidgets.QWidget):
             button.setFixedWidth(self.LEVEL_BUTTON_WIDTH)
 
             button.setStyleSheet(
-                "QToolButton:checked {background-color: rgba(%s, %s, %s, %s);}" % (
+                "QToolButton:checked {background-color: rgba(%s, %s, %s, %s)}" % (
                     self.LEVEL_COLORS[level_name][0],
                     self.LEVEL_COLORS[level_name][1],
                     self.LEVEL_COLORS[level_name][2],
@@ -222,9 +228,9 @@ class LogbookWidget(QtWidgets.QWidget):
         filter_label.setFixedWidth(self.LABEL_WIDTH)
         filter_layout.addWidget(filter_label)
 
-        filter_edit = QtWidgets.QLineEdit(self._filter_regex)
-        filter_edit.setStyleSheet("""QWidget {border: none} """)
-        filter_layout.addWidget(filter_edit)
+        self.filter_edit = QtWidgets.QLineEdit(self.INITIAL_FILTER_REGEX)
+        self.filter_edit.setStyleSheet("""QWidget {border: none} """)
+        filter_layout.addWidget(self.filter_edit)
 
         records_group = QtWidgets.QGroupBox("Records")
         container_layout.addWidget(records_group)
@@ -251,15 +257,24 @@ class LogbookWidget(QtWidgets.QWidget):
             )
         self.clear_records_button.clicked.connect(self.records_list.clear)
         self.background_coloring_checkbox.toggled.connect(self._toggle_coloring)
+        self.filter_edit.textChanged.connect(self._on_filter_changed)
 
     def _on_level_button_toggled(self, button, state):
         """ handles show states of LogRecordItems """
+        self._revert_filter_states()
         for item in self._record_items:
-            if item.level == button.property("level_name"):
-                if state:
-                    self.records_list.setItemHidden(item, False)
-                else:
-                    self.records_list.setItemHidden(item, True)
+            self._filter(item)
+
+    def _on_filter_changed(self, text):
+        """ performs a regex match on all record items and filter out items that will not match """
+        self._filter_regex = re.compile(r"{}".format(text))
+        self._revert_filter_states()
+        for item in self._record_items:
+            self._filter(item)
+
+    def _revert_filter_states(self):
+        for item in self._record_items:
+            self.records_list.setItemHidden(item, False)
 
     def _toggle_coloring(self, state):
         """ activates or deactivates background coloring for record items """
@@ -276,6 +291,16 @@ class LogbookWidget(QtWidgets.QWidget):
         else:
             item.setBackgroundColor(QtGui.QColor(0, 0, 0, 0))
 
+    def _filter(self, item):
+        """ set visibility state based on filter regex match and active levels """
+        _match = self._filter_regex.search(item.text())
+        if not _match or item.level not in self._active_levels:
+            self.records_list.setItemHidden(item, True)
+
+    @property
+    def _active_levels(self):
+        return [_.property("level_name") for _ in self.level_buttons if _.isChecked()]
+
     @property
     def _record_items(self):
         """ all available record items """
@@ -288,6 +313,7 @@ class LogbookWidget(QtWidgets.QWidget):
         def _add_item():
             item = LogRecordItem(log_record)
             self.records_list.addItem(item)
+            self._filter(item)
             self._set_background_color(item)
 
         worker = Worker(_add_item)
@@ -313,6 +339,8 @@ if __name__ == '__main__':
     pool = ThreadPool(1)
 
     def emit(*args):
+        for i in range(2):
+            LOG.debug("debug %s" % i)
         for i in range(5):
             LOG.info("info %s" % i)
         for i in range(1):
@@ -326,7 +354,7 @@ if __name__ == '__main__':
     logbook.show()
 
     LOG = logging.getLogger("test")
-    LOG.setLevel(logging.INFO)
+    LOG.setLevel(logging.DEBUG)
 
     LOG.addHandler(logbook.handler)
     pool.map_async(emit, range(50))
