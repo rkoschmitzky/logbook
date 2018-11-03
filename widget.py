@@ -84,18 +84,14 @@ class LogbookWidget(QtWidgets.QWidget):
         "error",
         "critical"
     ]
-    LEVEL_VALUES = OrderedDict(
-        sorted(
-            {
-                LOG_LEVELS[0]: logging.DEBUG,
-                LOG_LEVELS[1]: logging.INFO,
-                LOG_LEVELS[2]: logging.WARNING,
-                LOG_LEVELS[3]: logging.ERROR,
-                LOG_LEVELS[4]: logging.CRITICAL
-            }.items(),
-            key=lambda _: _[1]
-        )
-    )
+    LEVEL_VALUES = {
+        LOG_LEVELS[0]: logging.DEBUG,
+        LOG_LEVELS[1]: logging.INFO,
+        LOG_LEVELS[2]: logging.WARNING,
+        LOG_LEVELS[3]: logging.ERROR,
+        LOG_LEVELS[4]: logging.CRITICAL
+    }
+
     LEVEL_COLORS = {
         LOG_LEVELS[0]: (255, 255, 255, 100),
         LOG_LEVELS[1]: (204, 236, 242, 100),
@@ -220,12 +216,15 @@ class LogbookWidget(QtWidgets.QWidget):
         level_buttons_layout.addWidget(levels_label)
 
         self.level_buttons = []
-        for level_name, level_value in self.LEVEL_VALUES.items():
+
+        for level_name in self.LOG_LEVELS:
+            level_value = self.LEVEL_VALUES[level_name]
+
             button = QtWidgets.QToolButton()
             button.setText(level_name)
             button.setCheckable(True)
             button.setFixedHeight(20)
-            button.setProperty("level_name", level_name)
+            button.setProperty("levelno", level_value)
             button.setChecked(True)
             button.setFixedWidth(self.LEVEL_BUTTON_WIDTH)
 
@@ -326,12 +325,13 @@ class LogbookWidget(QtWidgets.QWidget):
     def _filter(self, item):
         """ set visibility state based on filter regex match and active levels """
         _match = self._filter_regex.search(item.text())
-        if not _match or item.level not in self._active_levels:
+        print item.record.levelno, self._active_levels
+        if not _match or item.record.levelno not in self._active_levels:
             self.records_list.setItemHidden(item, True)
 
     @property
     def _active_levels(self):
-        return [_.property("level_name") for _ in self.level_buttons if _.isChecked()]
+        return [_.property("levelno") for _ in self.level_buttons if _.isChecked()]
 
     @property
     def _record_items(self):
