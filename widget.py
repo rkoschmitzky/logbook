@@ -325,7 +325,6 @@ class LogbookWidget(QtWidgets.QWidget):
     def _filter(self, item):
         """ set visibility state based on filter regex match and active levels """
         _match = self._filter_regex.search(item.text())
-        print item.record.levelno, self._active_levels
         if not _match or item.record.levelno not in self._active_levels:
             self.records_list.setItemHidden(item, True)
 
@@ -414,7 +413,7 @@ if __name__ == '__main__':
     application = QtWidgets.QApplication([])
     logbook = LogbookWidget()
     logbook.signals.record_context_request.connect(MyMenu)
-    logbook.handler.setFormatter(logging.Formatter("%(asctime)-15s %(message)s"))
+    logbook.handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
     logbook.show()
 
     LOG = logging.getLogger("test")
