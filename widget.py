@@ -28,8 +28,14 @@ class Worker(QtCore.QRunnable):
 class LogRecordItem(QtWidgets.QListWidgetItem):
     """ a simple QListWidgetItem with LogRecord storage. """
     
-    def __init__(self, record):
-        super(LogRecordItem, self).__init__(record.msg)
+    def __init__(self, record, formatter=None):
+
+        if formatter:
+            text = formatter.format(record)
+        else:
+            text = record.msg
+
+        super(LogRecordItem, self).__init__(text)
 
         self._record = record
 
@@ -98,6 +104,7 @@ class LogbookWidget(QtWidgets.QWidget):
         LOG_LEVELS[4]: (182, 60, 66, 100)
     }
     INITIAL_FILTER_REGEX = r""
+    IGNORE_FORMATTER = False
     EXCEPTION_FORMATTER = logging.Formatter()
 
     _handler = LogbookHandler()
@@ -336,7 +343,13 @@ class LogbookWidget(QtWidgets.QWidget):
         """ adds a LogRecord object to the records list widget"""
 
         def _add_item():
-            item = LogRecordItem(log_record)
+
+            if self.IGNORE_FORMATTER:
+                formatter = None
+            else:
+                formatter = self.handler.formatter
+
+            item = LogRecordItem(log_record, formatter)
             self.records_list.addItem(item)
             self._set_tooltip(item)
             self._filter(item)
@@ -374,15 +387,15 @@ if __name__ == '__main__':
     pool = ThreadPool(1)
 
     def emit(*args):
-        for i in range(2):
+        for i in range(10):
             LOG.debug("debug %s" % i)
-        for i in range(5):
+        for i in range(3):
             LOG.info("info %s" % i)
-        for i in range(1):
-            LOG.warning("warning %s" % i)
         for i in range(2):
+            LOG.warning("warning %s" % i)
+        for i in range(1):
             LOG.error("error %s" % i)
-        time.sleep(0.3)
+        time.sleep(1.2)
 
     def emit_error(*args):
         try:
@@ -401,13 +414,14 @@ if __name__ == '__main__':
     application = QtWidgets.QApplication([])
     logbook = LogbookWidget()
     logbook.signals.record_context_request.connect(MyMenu)
+    logbook.handler.setFormatter(logging.Formatter("%(asctime)-15s %(message)s"))
     logbook.show()
 
     LOG = logging.getLogger("test")
     LOG.setLevel(logging.DEBUG)
 
     LOG.addHandler(logbook.handler)
-    pool.map_async(emit_error, range(1))
+    #pool.map_async(emit_error, range(1))
     pool.map_async(emit, range(50))
 
     application.exec_()
