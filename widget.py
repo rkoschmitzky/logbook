@@ -26,6 +26,8 @@ class Worker(QtCore.QRunnable):
 
 
 class LogRecordItem(QtWidgets.QListWidgetItem):
+    """ a simple QListWidgetItem with LogRecord storage. """
+    
     def __init__(self, record):
         super(LogRecordItem, self).__init__(record.msg)
 
@@ -38,6 +40,30 @@ class LogRecordItem(QtWidgets.QListWidgetItem):
     @property
     def record(self):
         return self._record
+
+
+class LogRecordsListWidget(QtWidgets.QListWidget):
+    """ A simple QListWidget with custom events. """
+    
+    def __init__(self, context_request_signal, parent=None):
+        super(LogRecordsListWidget, self).__init__(parent)
+
+        self._context_request_signal = context_request_signal
+
+    def mousePressEvent(self, event):
+        """ extend the mousePressEvent
+
+        We are adding a context widget request on RMB click here
+        Args:
+            event:
+
+        Returns:
+
+        """
+        if event.button() == QtCore.Qt.RightButton:
+            cursor_pos = QtGui.QCursor.pos()
+            record = self.itemAt(self.mapFromGlobal(cursor_pos)).record
+            self._context_request_signal.emit(cursor_pos, record)
 
 
 class LogbookWidget(QtWidgets.QWidget):
@@ -239,7 +265,9 @@ class LogbookWidget(QtWidgets.QWidget):
         records_layout = QtWidgets.QVBoxLayout()
         records_group.setLayout(records_layout)
 
-        self.records_list = QtWidgets.QListWidget()
+        self.records_list = LogRecordsListWidget(
+            context_request_signal=self.signals.record_context_request
+        )
         self.records_list.setStyleSheet("""QWidget {border: none} """)
         records_layout.addWidget(self.records_list)
 
@@ -331,6 +359,10 @@ class LogbookWidget(QtWidgets.QWidget):
         """
         return self._handler
 
+    @property
+    def signals(self):
+        return self.handler.signals
+
 
 if __name__ == '__main__':
     import logging
@@ -349,8 +381,17 @@ if __name__ == '__main__':
             LOG.error("error %s" % i)
         time.sleep(0.3)
 
+    class MyMenu(QtWidgets.QMenu):
+        def __init__(self, pos, record):
+            super(MyMenu, self).__init__()
+            self.addAction("{}: {}".format(record.levelname, record.msg))
+            self.exec_(pos)
+
     application = QtWidgets.QApplication([])
     logbook = LogbookWidget()
+
+    logbook.signals.record_context_request.connect(MyMenu)
+
     logbook.show()
 
     LOG = logging.getLogger("test")

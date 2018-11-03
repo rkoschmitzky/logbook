@@ -6,6 +6,7 @@ from Qt import QtCore
 class _Signals(QtCore.QObject):
     """ Custom signals """
     signal_record = QtCore.Signal(logging.LogRecord)
+    record_context_request = QtCore.Signal(QtCore.QPoint, logging.LogRecord)
 
     def __init__(self):
         QtCore.QObject.__init__(self)
