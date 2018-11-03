@@ -69,6 +69,8 @@ class LogRecordsListWidget(QtWidgets.QListWidget):
 class LogbookWidget(QtWidgets.QWidget):
     """ A simple widget that makes log reading more pleasant. """
 
+    LABEL_WIDTH = 70
+    LEVEL_BUTTON_WIDTH = 60
     LOG_LEVELS = [
         "debug",
         "info",
@@ -76,7 +78,6 @@ class LogbookWidget(QtWidgets.QWidget):
         "error",
         "critical"
     ]
-
     LEVEL_VALUES = OrderedDict(
         sorted(
             {
@@ -89,7 +90,6 @@ class LogbookWidget(QtWidgets.QWidget):
             key=lambda _: _[1]
         )
     )
-
     LEVEL_COLORS = {
         LOG_LEVELS[0]: (255, 255, 255, 100),
         LOG_LEVELS[1]: (204, 236, 242, 100),
@@ -97,11 +97,8 @@ class LogbookWidget(QtWidgets.QWidget):
         LOG_LEVELS[3]: (223, 57, 57, 100),
         LOG_LEVELS[4]: (182, 60, 66, 100)
     }
-
-    LABEL_WIDTH = 70
-    LEVEL_BUTTON_WIDTH = 60
-
     INITIAL_FILTER_REGEX = r""
+    EXCEPTION_FORMATTER = logging.Formatter()
 
     _handler = LogbookHandler()
 
@@ -341,11 +338,17 @@ class LogbookWidget(QtWidgets.QWidget):
         def _add_item():
             item = LogRecordItem(log_record)
             self.records_list.addItem(item)
+            self._set_tooltip(item)
             self._filter(item)
             self._set_background_color(item)
 
         worker = Worker(_add_item)
         self._threadpool.start(worker)
+
+    def _set_tooltip(self, item):
+        if item.record.exc_info:
+            item.setToolTip(self.EXCEPTION_FORMATTER.formatException(item.record.exc_info))
+        
 
     @property
     def handler(self):
@@ -381,23 +384,30 @@ if __name__ == '__main__':
             LOG.error("error %s" % i)
         time.sleep(0.3)
 
+    def emit_error(*args):
+        try:
+            x = 1/0
+        except:
+            LOG.error("aa", exc_info=True)
+
     class MyMenu(QtWidgets.QMenu):
         def __init__(self, pos, record):
             super(MyMenu, self).__init__()
             self.addAction("{}: {}".format(record.levelname, record.msg))
+            if record.exc_info:
+                self.addAction("{}: {}".format(str(record.exc_info[0]), record.exc_info[1].message))
             self.exec_(pos)
 
     application = QtWidgets.QApplication([])
     logbook = LogbookWidget()
-
     logbook.signals.record_context_request.connect(MyMenu)
-
     logbook.show()
 
     LOG = logging.getLogger("test")
     LOG.setLevel(logging.DEBUG)
 
     LOG.addHandler(logbook.handler)
+    pool.map_async(emit_error, range(1))
     pool.map_async(emit, range(50))
 
     application.exec_()
