@@ -229,12 +229,9 @@ class LogbookWidget(QtWidgets.QWidget):
             button.setFixedWidth(self.LEVEL_BUTTON_WIDTH)
 
             button.setStyleSheet(
-                "QToolButton:checked {background-color: rgba(%s, %s, %s, %s)}" % (
-                    self.LEVEL_COLORS[level_name][0],
-                    self.LEVEL_COLORS[level_name][1],
-                    self.LEVEL_COLORS[level_name][2],
-                    self.LEVEL_COLORS[level_name][3],
-                )
+                "QToolButton:checked {background-color: rgba(" +
+                ",".join([str(_) for _ in self.LEVEL_COLORS[level_name]]) +
+                " )}"
             )
 
             level_buttons_layout.addWidget(button)
@@ -386,7 +383,7 @@ if __name__ == '__main__':
     pool = ThreadPool(1)
 
     def emit(*args):
-        for i in range(10):
+        for i in range(1):
             LOG.debug("debug %s" % i)
         for i in range(3):
             LOG.info("info %s" % i)
@@ -400,7 +397,7 @@ if __name__ == '__main__':
         try:
             x = 1/0
         except:
-            LOG.error("aa", exc_info=True)
+            LOG.error("Something unexpected happened.", exc_info=True)
 
     class MyMenu(QtWidgets.QMenu):
         def __init__(self, pos, record):
@@ -411,9 +408,18 @@ if __name__ == '__main__':
             self.exec_(pos)
 
     application = QtWidgets.QApplication([])
+
+    LogbookWidget.LOG_LEVELS.insert(0, "paranoid")
+    LogbookWidget.LEVEL_VALUES["paranoid"] = 5
+    LogbookWidget.LEVEL_COLORS["paranoid"] = (125, 0, 125)
+
+
+
     logbook = LogbookWidget()
+
+
     logbook.signals.record_context_request.connect(MyMenu)
-    logbook.handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+    #logbook.handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
     logbook.show()
 
     LOG = logging.getLogger("test")
@@ -421,6 +427,6 @@ if __name__ == '__main__':
 
     LOG.addHandler(logbook.handler)
     #pool.map_async(emit_error, range(1))
-    pool.map_async(emit, range(50))
+    pool.map_async(emit, range(1))
 
     application.exec_()
