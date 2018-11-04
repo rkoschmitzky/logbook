@@ -1,19 +1,25 @@
 # Logbook
-A simple Qt widget to improve the plesure of reading log messages.
+A simple Qt widget to improve the pleasure of reading log messages.
 
 ### Table of Contents
-
 - [Logging](#logging)
+- [Prerequisites](#prerequisites)
 - [The Interface](#the-logbook-graphical-user-interface)
 - [Communication](#let-your-loggers-communicate-with-the-logbook)
 - [Customization](#customization)
   - [Attributes](#attributes)
   - [Formatting](#recorditems-formatting)
+  - [Custom Levels](#custom-levels)
   - [Exception ToolTips](#exception-tooltips)
   - [Custom Signals](#custom-signals)
 
 ### Logging
 The Logging module is awesome! However if multiple people/tools setup numerous loggers and handlers it can make reading and filtering log messages hard.
+
+-----
+
+### Prerequisites
+You need to ensure the [Qt.py](https://github.com/mottosso/Qt.py) wrapper is available, which supports PySide2, PyQt5, PySide and PyQt4.
 
 -----
 
@@ -73,6 +79,22 @@ A formatter can be set easily by using the `handler` property on the logbook ins
 ```python
 my_logbook.handler.setFormatter("%(asctime)s %(message)s")
 ```
+
+#### Custom Levels
+You can provide custom levels for the Logbook.
+```python
+from logbook import LogbookWidget
+
+# the order inside the `LOG_LEVELS` list matters, the buttons will be added from left to right
+# we would like to introduce the "paranoid" level, that is below `logging.DEBUG`
+LogbookWidget.LOG_LEVELS.insert(0, "paranoid")
+# a corresponding level and color must be defined
+LogbookWidget.LEVEL_VALUES["paranoid"] = 5
+# an alpha value is optional
+LogbookWidget.LEVEL_COLORS["paranoid"] = (125, 80, 125)
+```
+
+<img src="https://github.com/rkoschmitzky/logbook/blob/master/.graphics/custom_level.gif" width="400">
 
 #### Exception ToolTips
 Whenever a catched `LogRecord` includes an `exc_info` tuple, it will display a ToolTip with the underlying exception.
