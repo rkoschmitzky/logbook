@@ -40,10 +40,6 @@ class LogRecordItem(QtWidgets.QListWidgetItem):
         self._record = record
 
     @property
-    def level(self):
-        return self._record.levelname.lower()
-
-    @property
     def record(self):
         return self._record
 
@@ -220,19 +216,19 @@ class LogbookWidget(QtWidgets.QWidget):
         for level_name in self.LOG_LEVELS:
             level_value = self.LEVEL_VALUES[level_name]
 
-            button = QtWidgets.QToolButton()
+            _button_style = "QPushButton:%s {border-style: outset; background-color: rgba(" + \
+                ", ".join([str(_) for _ in self.LEVEL_COLORS[level_name]]) + \
+                ")}"
+
+            button = QtWidgets.QPushButton()
+            button.setAutoFillBackground(True)
             button.setText(level_name)
             button.setCheckable(True)
             button.setFixedHeight(20)
             button.setProperty("levelno", level_value)
             button.setChecked(True)
             button.setFixedWidth(self.LEVEL_BUTTON_WIDTH)
-
-            button.setStyleSheet(
-                "QToolButton:checked {background-color: rgba(" +
-                ",".join([str(_) for _ in self.LEVEL_COLORS[level_name]]) +
-                " )}"
-            )
+            button.setStyleSheet(_button_style % "checked" + _button_style % "pressed")
 
             level_buttons_layout.addWidget(button)
             self.level_buttons.append(button)
@@ -315,9 +311,19 @@ class LogbookWidget(QtWidgets.QWidget):
         This is based on the check state of the coloring checkbox.
         """
         if self.background_coloring_checkbox.isChecked():
-            item.setBackgroundColor(self._colors[item.level])
+            item.setBackgroundColor(
+                self._colors[self._get_level_name_from_level_value(item.record.levelno)]
+            )
         else:
             item.setBackgroundColor(QtGui.QColor(0, 0, 0, 0))
+
+    def _get_level_name_from_level_value(self, value):
+        """ a helper to retrieve the level name from the associated value """
+        for k, v in self.LEVEL_VALUES.items():
+            if v == value:
+                return k
+
+        raise ValueError("Value {} not found in LEVEL_VALUES attribute.".format(value))
 
     def _filter(self, item):
         """ set visibility state based on filter regex match and active levels """
@@ -387,6 +393,8 @@ if __name__ == '__main__':
             LOG.debug("debug %s" % i)
         for i in range(3):
             LOG.info("info %s" % i)
+        for i in range(1):
+            LOG.log(5, "foobar")
         for i in range(2):
             LOG.warning("warning %s" % i)
         for i in range(1):
@@ -411,19 +419,16 @@ if __name__ == '__main__':
 
     LogbookWidget.LOG_LEVELS.insert(0, "paranoid")
     LogbookWidget.LEVEL_VALUES["paranoid"] = 5
-    LogbookWidget.LEVEL_COLORS["paranoid"] = (125, 0, 125)
-
-
+    LogbookWidget.LEVEL_COLORS["paranoid"] = (125, 80, 125)
 
     logbook = LogbookWidget()
-
 
     logbook.signals.record_context_request.connect(MyMenu)
     #logbook.handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
     logbook.show()
 
     LOG = logging.getLogger("test")
-    LOG.setLevel(logging.DEBUG)
+    LOG.setLevel(1)
 
     LOG.addHandler(logbook.handler)
     #pool.map_async(emit_error, range(1))
