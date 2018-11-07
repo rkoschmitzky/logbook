@@ -50,7 +50,10 @@ my_logger = logging.getLogger("foo")
 my_logbook_instance = LogbookWidget()
 
 # the `handler` property holds the required handler
-my_logger.attachHandler(my_logbook_instance.handler)
+my_logger.addHandler(my_logbook_instance.handler)
+
+# show the logbook gui
+my_logbook_instance.show()
 ```
 As soon as your handler was attached, the log records will be catched within a background thread to keep the UI respsonsive.
 
