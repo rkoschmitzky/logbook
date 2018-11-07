@@ -27,7 +27,7 @@ class Worker(QtCore.QRunnable):
 
 class LogRecordItem(QtWidgets.QListWidgetItem):
     """ a simple QListWidgetItem with LogRecord storage. """
-    
+
     def __init__(self, record, formatter=None):
 
         if formatter:
@@ -43,10 +43,17 @@ class LogRecordItem(QtWidgets.QListWidgetItem):
     def record(self):
         return self._record
 
+    def setBackgroundColor(self, color):
+        # Qt.py doesn't handle this, so maintain compatibility
+        try:
+            super(LogRecordItem, self).setBackgroundColor(color)
+        except AttributeError:
+            self.setBackground(QtGui.QBrush(color))
+
 
 class LogRecordsListWidget(QtWidgets.QListWidget):
     """ A simple QListWidget with custom events. """
-    
+
     def __init__(self, context_request_signal, parent=None):
         super(LogRecordsListWidget, self).__init__(parent)
 
@@ -133,13 +140,13 @@ class LogbookWidget(QtWidgets.QWidget):
                 "LEVEL_VALUES",
                 # todo: maybe not helpful enough
                 "".join(context_diff(_level_names_sorted, _level_values_keys_sorted))
-                )
+            )
             )
         if _level_names_sorted != _level_colors_keys_sorted:
             raise ValueError(_keys_number_msg.format(
                 "LEVEL_COLORS",
                 "".join(context_diff(_level_names_sorted, _level_colors_keys_sorted))
-                )
+            )
             )
 
         for level_name in cls.LOG_LEVELS:
@@ -147,40 +154,40 @@ class LogbookWidget(QtWidgets.QWidget):
                 raise KeyError(_missing_key_msg.format(level_name, "LEVEL_VALUES"))
             if level_name not in cls.LEVEL_COLORS:
                 raise KeyError(_missing_key_msg.format(level_name, "LEVEL_COLORS"))
-            
+
             # check log level values
             if not isinstance(cls.LEVEL_VALUES[level_name], int):
                 raise TypeError(_type_msg.format(
-                        level_name,
-                        "int",
-                        type(cls.LEVEL_VALUES[level_name])
-                    )
+                    level_name,
+                    "int",
+                    type(cls.LEVEL_VALUES[level_name])
+                )
                 )
             if cls.LEVEL_VALUES[level_name] < 1:
                 raise ValueError("A log level for level name '{}' must be defined with a value <= 1.".format(
-                        level_name    
-                    )
+                    level_name
+                )
                 )
             # check log level colors
             if not isinstance(cls.LEVEL_COLORS[level_name], (list, tuple)):
                 raise TypeError(_type_msg.format(
-                        level_name,
-                        "tuple or int",
-                        type(cls.LEVEL_COLORS[level_name])
-                    )
+                    level_name,
+                    "tuple or int",
+                    type(cls.LEVEL_COLORS[level_name])
                 )
-            
+                )
+
             # check RGBA values
             if [True, True, True] != [_ >= 0 and _ <= 255 for _ in cls.LEVEL_COLORS[level_name][:3]]:
                 raise ValueError(_invalid_rgba_msg.format(
                     cls.LEVEL_COLORS[level_name]
-                    )
+                )
                 )
             if len(cls.LEVEL_COLORS[level_name]) == 4:
                 if cls.LEVEL_COLORS[level_name][-1] <= 0 or cls.LEVEL_COLORS[level_name][-1] > 100:
                     raise ValueError(_invalid_rgba_msg.format(
                         cls.LEVEL_COLORS[level_name]
-                        )
+                    )
                     )
             elif len(cls.LEVEL_COLORS[level_name]) > 4:
                 raise ValueError(_invalid_rgba_msg.format(cls.LEVEL_COLORS[level_name]))
@@ -217,8 +224,8 @@ class LogbookWidget(QtWidgets.QWidget):
             level_value = self.LEVEL_VALUES[level_name]
 
             _button_style = "QPushButton:%s {border-style: outset; background-color: rgba(" + \
-                ", ".join([str(_) for _ in self.LEVEL_COLORS[level_name]]) + \
-                ")}"
+                            ", ".join([str(_) for _ in self.LEVEL_COLORS[level_name]]) + \
+                            ")}"
 
             button = QtWidgets.QPushButton()
             button.setAutoFillBackground(True)
@@ -298,7 +305,7 @@ class LogbookWidget(QtWidgets.QWidget):
 
     def _revert_filter_states(self):
         for item in self._record_items:
-            self.records_list.setItemHidden(item, False)
+            item.setHidden(False)
 
     def _toggle_coloring(self, state):
         """ activates or deactivates background coloring for record items """
@@ -307,7 +314,7 @@ class LogbookWidget(QtWidgets.QWidget):
 
     def _set_background_color(self, item):
         """ actives or deactivates background coloring
-        
+
         This is based on the check state of the coloring checkbox.
         """
         if self.background_coloring_checkbox.isChecked():
@@ -329,7 +336,7 @@ class LogbookWidget(QtWidgets.QWidget):
         """ set visibility state based on filter regex match and active levels """
         _match = self._filter_regex.search(item.text())
         if not _match or item.record.levelno not in self._active_levels:
-            self.records_list.setItemHidden(item, True)
+            item.setHidden(True)
 
     @property
     def _active_levels(self):
@@ -363,7 +370,6 @@ class LogbookWidget(QtWidgets.QWidget):
     def _set_tooltip(self, item):
         if item.record.exc_info:
             item.setToolTip(self.EXCEPTION_FORMATTER.formatException(item.record.exc_info))
-        
 
     @property
     def handler(self):
