@@ -1,6 +1,5 @@
 import logging
 
-from collections import OrderedDict
 from difflib import context_diff
 from functools import partial
 import re
@@ -71,8 +70,9 @@ class LogRecordsListWidget(QtWidgets.QListWidget):
         """
         if event.button() == QtCore.Qt.RightButton:
             cursor_pos = QtGui.QCursor.pos()
-            record = self.itemAt(self.mapFromGlobal(cursor_pos)).record
-            self._context_request_signal.emit(cursor_pos, record)
+            item = self.itemAt(self.mapFromGlobal(cursor_pos))
+            if item:
+                self._context_request_signal.emit(cursor_pos, item.record)
 
 
 class LogbookWidget(QtWidgets.QWidget):
