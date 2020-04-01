@@ -345,7 +345,7 @@ class LogbookWidget(QtWidgets.QWidget):
     @property
     def _record_items(self):
         """ all available record items """
-        for row in xrange(self.records_list.count()):
+        for row in range(self.records_list.count()):
             yield self.records_list.item(row)
 
     def add_record(self, log_record):
