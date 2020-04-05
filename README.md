@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/rkoschmitzky/logbook.svg?branch=master)](https://travis-ci.com/rkoschmitzky/logbook)
+[![Build Status](https://travis-ci.com/rkoschmitzky/logbook.svg?branch=master)]
 https://travis-ci.com/rkoschmitzky/logbook.svg?branch=master
 
 # Logbook
