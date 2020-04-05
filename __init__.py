@@ -1,1 +1,1 @@
-from widget import LogbookWidget
+from .widget import LogbookWidget

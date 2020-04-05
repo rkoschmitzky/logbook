@@ -9,7 +9,7 @@ from Qt import (QtGui,
                 QtCore
                 )
 
-from handler import LogbookHandler
+from .handler import LogbookHandler
 
 
 class Worker(QtCore.QRunnable):
