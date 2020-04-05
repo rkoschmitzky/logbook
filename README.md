@@ -1,3 +1,4 @@
+|build-status| |coverage| |license| |pyversion|
 # Logbook
 A simple Qt widget to improve the pleasure of reading log messages.
 
