@@ -7,3 +7,9 @@ python:
   - '3.8'
 os:
     - linux
+cache: pip
+install:
+  - pip install -r requirements.txt
+
+script:
+  - nosetests tests --with-coverage
