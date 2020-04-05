@@ -126,9 +126,10 @@ The following signals can be connected to extend functionality of the loogbook.
 # it will pass the global cursor position and underlying `LogRecord` instance
 
 class MyMenu(QtWidgets.QMenu):
-    def __init__(self, pos, record):
+    def __init__(self, pos, record_items, records_list_widget):
         super(MyMenu, self).__init__()
-        self.addAction("{}| {}".format(record.levelname, record.msg))
+        for record_item in record_items:
+            self.addAction("{}| {}".format(record_item.record.levelname, record_item.record.msg))
         self.exec_(pos)
 
 my_logbook_instance.signals.record_context_request.connect(MyMenu)

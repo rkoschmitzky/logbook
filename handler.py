@@ -1,12 +1,15 @@
 import logging
 
-from Qt import QtCore
+from Qt import (
+    QtCore,
+    QtWidgets
+)
 
 
 class _Signals(QtCore.QObject):
     """ Custom signals """
     signal_record = QtCore.Signal(logging.LogRecord)
-    record_context_request = QtCore.Signal(QtCore.QPoint, logging.LogRecord)
+    record_context_request = QtCore.Signal(QtCore.QPoint, list, QtWidgets.QListWidget)
 
     def __init__(self):
         QtCore.QObject.__init__(self)

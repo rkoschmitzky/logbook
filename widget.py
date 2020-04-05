@@ -56,6 +56,7 @@ class LogRecordsListWidget(QtWidgets.QListWidget):
     def __init__(self, context_request_signal, parent=None):
         super(LogRecordsListWidget, self).__init__(parent)
 
+        self.setSelectionMode(self.ExtendedSelection)
         self._context_request_signal = context_request_signal
 
     def mousePressEvent(self, event):
@@ -70,9 +71,12 @@ class LogRecordsListWidget(QtWidgets.QListWidget):
         """
         if event.button() == QtCore.Qt.RightButton:
             cursor_pos = QtGui.QCursor.pos()
-            item = self.itemAt(self.mapFromGlobal(cursor_pos))
-            if item:
-                self._context_request_signal.emit(cursor_pos, item.record)
+            items = self.selectedItems() or [self.itemAt(self.mapFromGlobal(cursor_pos))]
+
+            if items:
+                self._context_request_signal.emit(cursor_pos, [_ for _ in items], self)
+
+        super(LogRecordsListWidget, self).mousePressEvent(event)
 
 
 class LogbookWidget(QtWidgets.QWidget):
