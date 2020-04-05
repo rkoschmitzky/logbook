@@ -122,8 +122,9 @@ The following signals can be connected to extend functionality of the loogbook.
 
 ```python
 # example shows how to call a custom QMenu
-# the event gets triggered via RMB click on a recorditem
-# it will pass the global cursor position and underlying `LogRecord` instance
+# the event gets triggered via RMB click on a LogRecordItem
+# it will pass the global cursor position, a list of underlying/selected `LogRecordItem` instances 
+# and the LogRecordsListWidget
 
 class MyMenu(QtWidgets.QMenu):
     def __init__(self, pos, record_items, records_list_widget):
