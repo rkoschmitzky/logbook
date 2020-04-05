@@ -1,5 +1,4 @@
-[![Build Status](https://travis-ci.com/rkoschmitzky/logbook.svg?branch=master)]
-https://travis-ci.com/rkoschmitzky/logbook.svg?branch=master
+[![Build Status](https://travis-ci.com/rkoschmitzky/logbook.svg?branch=master)](https://travis-ci.com/rkoschmitzky/logbook)
 
 # Logbook
 A simple Qt widget to improve the pleasure of reading log messages.
