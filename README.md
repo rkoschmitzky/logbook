@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/rkoschmitzky/logbook.svg?branch=master)](https://travis-ci.com/rkoschmitzky/logbook) [![Coverage Status](https://coveralls.io/repos/github/rkoschmitzky/logbook/badge.svg?branch=master)](https://coveralls.io/github/rkoschmitzky/logbook?branch=master) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://travis-ci.com/rkoschmitzky/logbook.svg?branch=master)](https://travis-ci.com/rkoschmitzky/logbook) [![Coverage Status](https://coveralls.io/repos/github/rkoschmitzky/logbook/badge.svg?branch=master&service=github)](https://coveralls.io/github/rkoschmitzky/logbook?branch=master) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # Logbook
 A simple Qt widget to improve the pleasure of reading log messages.
