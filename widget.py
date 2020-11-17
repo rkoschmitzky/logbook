@@ -32,7 +32,7 @@ class LogRecordItem(QtWidgets.QListWidgetItem):
         if formatter:
             text = formatter.format(record)
         else:
-            text = record.message
+            text = record.getMessage()
 
         super(LogRecordItem, self).__init__(text)
 
