@@ -9,4 +9,4 @@ PySide2==5.14.2
 Qt.py==1.2.5
 requests==2.23.0
 shiboken2==5.14.2
-urllib3==1.25.8
+urllib3==1.26.5
