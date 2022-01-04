@@ -45,10 +45,15 @@ class LogRecordItem(QtWidgets.QListWidgetItem):
     def setBackgroundColor(self, color):
         # Qt.py doesn't handle this, so maintain compatibility
         try:
-            super(LogRecordItem, self).setBackgroundColor(color)
+            super(LogRecordItem, self).setBackground(color)
         except AttributeError:
             self.setBackground(QtGui.QBrush(color))
 
+    def setForegroundColor(self, color):
+        try:
+            super(LogRecordItem, self).setForeground(color)
+        except AttributeError:
+            self.setForeground(QtGui.QBrush(color))
 
 class LogRecordsListWidget(QtWidgets.QListWidget):
     """ A simple QListWidget with custom events. """
@@ -77,6 +82,7 @@ class LogRecordsListWidget(QtWidgets.QListWidget):
                 self._context_request_signal.emit(cursor_pos, [_ for _ in items], self)
 
         super(LogRecordsListWidget, self).mousePressEvent(event)
+
 
 
 class LogbookWidget(QtWidgets.QWidget):
@@ -108,6 +114,9 @@ class LogbookWidget(QtWidgets.QWidget):
     }
     INITIAL_FILTER_REGEX = r""
     IGNORE_FORMATTER = False
+    DEFAULT_COLOR_BOOL = True
+    DEFAULT_COLOR_TYPE = ['setForeground', 'setBackground']
+    DEFAULT_COLOR_TYPE_VALUE = 0
     EXCEPTION_FORMATTER = logging.Formatter()
 
     _handler = LogbookHandler()
@@ -127,6 +136,9 @@ class LogbookWidget(QtWidgets.QWidget):
         self._setup_ui()
         self._setup_signals()
 
+        if self.DEFAULT_COLOR_BOOL:
+            self.background_coloring_checkbox.setChecked(True)
+            
     @classmethod
     def _validate_levels(cls):
         """ ensure we allow flexible level addition but give proper guidance """
@@ -247,6 +259,7 @@ class LogbookWidget(QtWidgets.QWidget):
         level_buttons_layout.addWidget(v_separator)
 
         self.background_coloring_checkbox = QtWidgets.QCheckBox("Coloring")
+
         level_buttons_layout.addWidget(self.background_coloring_checkbox)
 
         level_buttons_layout.addStretch()
@@ -314,7 +327,10 @@ class LogbookWidget(QtWidgets.QWidget):
     def _toggle_coloring(self, state):
         """ activates or deactivates background coloring for record items """
         for item in self._record_items:
-            self._set_background_color(item)
+            if self.DEFAULT_COLOR_TYPE_VALUE == 0:
+                self._set_foreground_color(item)
+            elif self.DEFAULT_COLOR_TYPE_VALUE == 1:
+                self._set_background_color(item)
 
     def _set_background_color(self, item):
         """ actives or deactivates background coloring
@@ -323,6 +339,18 @@ class LogbookWidget(QtWidgets.QWidget):
         """
         if self.background_coloring_checkbox.isChecked():
             item.setBackgroundColor(
+                self._colors[self._get_level_name_from_level_value(item.record.levelno)]
+            )
+        else:
+            item.setBackgroundColor(QtGui.QColor(0, 0, 0, 0))
+    
+    def _set_foreground_color(self, item):
+        """ actives or deactivates background coloring
+
+        This is based on the check state of the coloring checkbox.
+        """
+        if self.background_coloring_checkbox.isChecked():
+            item.setForeground(
                 self._colors[self._get_level_name_from_level_value(item.record.levelno)]
             )
         else:
@@ -366,7 +394,12 @@ class LogbookWidget(QtWidgets.QWidget):
             self.records_list.addItem(item)
             self._set_tooltip(item)
             self._filter(item)
-            self._set_background_color(item)
+            if self.DEFAULT_COLOR_TYPE_VALUE == 0:
+                self._set_foreground_color(item)
+            elif self.DEFAULT_COLOR_TYPE_VALUE == 1:
+                self._set_background_color(item)
+            else:
+                raise RuntimeError('Can Set 0:set_foreground or 1:set_background for DEFAULT_COLOR_TYPE_VALUE')
 
         worker = Worker(_add_item)
         self._threadpool.start(worker)
