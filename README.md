@@ -76,6 +76,8 @@ As soon as your handler was attached, the log records will be catched within a b
 | `INITIAL_FILTER_REGEX`  | `str`    | A regular expression that will be used when launching the logbook.
 | `IGNORE_FORMATTER`      | `bool`   | If a formatter was set to the handler, it can be explicitly ignored by setting this to `True`. This means, the formatter will not be considered as the recorditem's text. Instead it will only use the `LogRecord.msg` directly.
 | `EXCEPTION_FORMATTER`   | `logging.Formatter` |  A formatter instance that will be used to format the `exc_info` tuple that will be dispayed inside the ToolTips of recorditems.
+| `DEFAULT_COLOR_BOOL`   | `bool` |  Control whether the color Checkbox is turned on or off
+| `DEFAULT_COLOR_TYPE_VALUE`   | `int` |  0 setForeground(Text), 1 setBackground(Text Background)
 
 #### Recorditems Formatting
 By default the logbook handlers doesn't use a formatting. It will use the `LogRecord.msg` attribute as the recorditem's text.
