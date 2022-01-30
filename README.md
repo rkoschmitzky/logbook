@@ -81,9 +81,9 @@ As soon as your handler was attached, the log records will be catched within a b
 
 | Flag                      | Description
 |:--------------------------|:-----------
-| INITIAL_COLORING          | When given the `Coloring` option will be checked by default when launching the logbook. 
-| COLORING_TEXT             | When given the item's foreground color will be set instead of the background color.
-| READABLE_TEXT_COLOR       | When given and `COLORING_TEXT` is NOT set it sets an automatic item foreground color based on the background color for better readability.
+| `INITIAL_COLORING`        | When given the `Coloring` option will be checked by default when launching the logbook. 
+| `COLORING_TEXT`           | When given the item's foreground color will be set instead of the background color.
+| `READABLE_TEXT_COLOR`     | When given and `COLORING_TEXT` is NOT set it sets an automatic item foreground color based on the background color for better readability.
 
 This examples activates coloring of item's foreground color instead of background color.
 ```python
