@@ -67,16 +67,30 @@ As soon as your handler was attached, the log records will be catched within a b
 
 #### Attributes
 
-| Attribute               | Type     | Description
-|:------------------------|:---------|:------------
-| `LEVEL_BUTTON_WIDTH`    | `int`    | Defines the width of the level buttons.
-| `LOG_LEVELS`            | `list`   | A list with levels that will correspond to the checkable level buttons that will be added. default: `["debug", "info", "warning", "error", "critical"]`. When changed the `LEVEL_VALUES` and `LEVEL_COLORS` attribute needs to be adjusted too.
-| `LEVEL_VALUES`          | `dict`   | A dictionary with corresponding level numbers to the defined `LOG_LEVELS`. default: `{"debug": 10, "info": 20, "warning": 30, error: "40", "critical": 50}`.
-| `LEVEL_COLORS`          | `dict`   | A dictionary with coreresponding colors to the defined `LOG_LEVELS`. Expects RGB values from 0-255 and an optional alpha value from 0-100. default: `        "debug": (255, 255, 255, 100), "info": (204, 236, 242, 100), "warning": (152, 210, 217, 100), "error": (223, 57, 57, 100), "critical": (182, 60, 66, 100)}`
-| `INITIAL_FILTER_REGEX`  | `str`    | A regular expression that will be used when launching the logbook.
-| `INITIAL_COLORING`      | `bool`   | If `True` coloring mode will be enabled by default when launching the logbook.
-| `IGNORE_FORMATTER`      | `bool`   | If a formatter was set to the handler, it can be explicitly ignored by setting this to `True`. This means, the formatter will not be considered as the recorditem's text. Instead it will only use the `LogRecord.msg` directly.
+| Attribute               | Type      | Description
+|:------------------------|:----------|:------------
+| `FLAGS`                 | `bytemask`| Set different logbook behaviors that can be combined.
+| `LEVEL_BUTTON_WIDTH`    | `int`     | Defines the width of the level buttons.
+| `LOG_LEVELS`            | `list`    | A list with levels that will correspond to the checkable level buttons that will be added. default: `["debug", "info", "warning", "error", "critical"]`. When changed the `LEVEL_VALUES` and `LEVEL_COLORS` attribute needs to be adjusted too.
+| `LEVEL_VALUES`          | `dict`    | A dictionary with corresponding level numbers to the defined `LOG_LEVELS`. default: `{"debug": 10, "info": 20, "warning": 30, error: "40", "critical": 50}`.
+| `LEVEL_COLORS`          | `dict`    | A dictionary with corresponding colors to the defined `LOG_LEVELS`. Expects RGB values from 0-255 and an optional alpha value from 0-100. default: `        "debug": (255, 255, 255, 100), "info": (204, 236, 242, 100), "warning": (152, 210, 217, 100), "error": (223, 57, 57, 100), "critical": (182, 60, 66, 100)}`
+| `INITIAL_FILTER_REGEX`  | `str`     | A regular expression that will be used when launching the logbook.
+| `INITIAL_COLORING`      | `bool`    | If `True` coloring mode will be enabled by default when launching the logbook.
+| `IGNORE_FORMATTER`      | `bool`    | If a formatter was set to the handler, it can be explicitly ignored by setting this to `True`. This means, the formatter will not be considered as the recorditem's text. Instead it will only use the `LogRecord.msg` directly.
 | `EXCEPTION_FORMATTER`   | `logging.Formatter` |  A formatter instance that will be used to format the `exc_info` tuple that will be dispayed inside the ToolTips of recorditems.
+
+| Flag                      | Description
+|:--------------------------|:-----------
+| INITIAL_COLORING          | When given the `Coloring` option will be checked by default when launching the logbook. 
+| COLORING_TEXT             | When given the item's foreground color will be set instead of the background color.
+| READABLE_TEXT_COLOR       | When given and `COLORING_TEXT` is NOT set it sets an automatic item foreground color based on the background color for better readability.
+
+This examples activates coloring of item's foreground color instead of background color.
+```python
+LogbookWidget.FLAGS = LogbookWidget.Flags.INITIAL_COLORING | LogbookWidget.Flags.COLORING_TEXT
+```
+
+<img src="https://github.com/rkoschmitzky/logbook/blob/master/.graphics/text_coloring.gif" width="400">
 
 #### Recorditems Formatting
 By default the logbook handlers doesn't use a formatting. It will use the `LogRecord.msg` attribute as the recorditem's text.
