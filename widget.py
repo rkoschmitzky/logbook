@@ -4,10 +4,11 @@ from difflib import context_diff
 from functools import partial
 import re
 
-from Qt import (QtGui,
-                QtWidgets,
-                QtCore
-                )
+from Qt import (
+    QtGui,
+    QtWidgets,
+    QtCore
+)
 
 from .handler import LogbookHandler
 
@@ -49,6 +50,16 @@ class LogRecordItem(QtWidgets.QListWidgetItem):
         except AttributeError:
             self.setBackground(QtGui.QBrush(color))
 
+    def set_foreground_color(self, color):
+        self.setForeground(QtGui.QBrush(color))
+
+    def set_readable_foreground_color(self, background_color):
+        almost_black = QtGui.QColor(QtCore.Qt.darkGray).darker(300)
+        almost_white = QtGui.QColor(QtCore.Qt.white).darker(120)
+        self.set_foreground_color(
+            almost_black if background_color.lightnessF() > 0.3 else almost_white
+        )
+
 
 class LogRecordsListWidget(QtWidgets.QListWidget):
     """ A simple QListWidget with custom events. """
@@ -82,6 +93,12 @@ class LogRecordsListWidget(QtWidgets.QListWidget):
 class LogbookWidget(QtWidgets.QWidget):
     """ A simple widget that makes log reading more pleasant. """
 
+    class Flags:
+        INITIAL_COLORING = 2**1
+        COLORING_TEXT = 2**2
+        READABLE_TEXT_COLOR = 2**3
+
+    FLAGS = 0
     LABEL_WIDTH = 70
     LEVEL_BUTTON_WIDTH = 60
     LOG_LEVELS = [
@@ -107,7 +124,6 @@ class LogbookWidget(QtWidgets.QWidget):
         LOG_LEVELS[4]: (182, 60, 66, 100)
     }
     INITIAL_FILTER_REGEX = r""
-    INITIAL_COLORING = False
     IGNORE_FORMATTER = False
     EXCEPTION_FORMATTER = logging.Formatter()
 
@@ -129,9 +145,20 @@ class LogbookWidget(QtWidgets.QWidget):
         self._setup_signals()
 
         # set other default states
-        if self.INITIAL_COLORING:
-            self.background_coloring_checkbox.setChecked(True)
+        if self._use_coloring:
+            self.coloring_checkbox.setChecked(True)
 
+    @property
+    def _use_coloring(self):
+        return (self.FLAGS & self.Flags.INITIAL_COLORING) > 0
+
+    @property
+    def _use_text_coloring(self):
+        return (self.FLAGS & self.Flags.COLORING_TEXT) > 0
+
+    @property
+    def _use_readable_text_coloring(self):
+        return (self.FLAGS & self.Flags.READABLE_TEXT_COLOR) > 0
 
     @classmethod
     def _validate_levels(cls):
@@ -252,8 +279,8 @@ class LogbookWidget(QtWidgets.QWidget):
 
         level_buttons_layout.addWidget(v_separator)
 
-        self.background_coloring_checkbox = QtWidgets.QCheckBox("Coloring")
-        level_buttons_layout.addWidget(self.background_coloring_checkbox)
+        self.coloring_checkbox = QtWidgets.QCheckBox("Coloring")
+        level_buttons_layout.addWidget(self.coloring_checkbox)
 
         level_buttons_layout.addStretch()
 
@@ -297,7 +324,7 @@ class LogbookWidget(QtWidgets.QWidget):
                 partial(self._on_level_button_toggled, level_button)
             )
         self.clear_records_button.clicked.connect(self.records_list.clear)
-        self.background_coloring_checkbox.toggled.connect(self._toggle_coloring)
+        self.coloring_checkbox.toggled.connect(self._toggle_coloring)
         self.filter_edit.textChanged.connect(self._on_filter_changed)
 
     def _on_level_button_toggled(self, button, state):
@@ -320,6 +347,15 @@ class LogbookWidget(QtWidgets.QWidget):
     def _toggle_coloring(self, state):
         """ activates or deactivates background coloring for record items """
         for item in self._record_items:
+            if not self._use_text_coloring:
+                self._set_background_color(item)
+            else:
+                self._set_text_color(item)
+
+    def _set_item_color(self, item):
+        if self._use_text_coloring:
+            self._set_text_color(item)
+        else:
             self._set_background_color(item)
 
     def _set_background_color(self, item):
@@ -327,12 +363,25 @@ class LogbookWidget(QtWidgets.QWidget):
 
         This is based on the check state of the coloring checkbox.
         """
-        if self.background_coloring_checkbox.isChecked():
+        if self.coloring_checkbox.isChecked():
             item.setBackgroundColor(
                 self._colors[self._get_level_name_from_level_value(item.record.levelno)]
             )
+            if self._use_readable_text_coloring:
+                item.set_readable_foreground_color(item.backgroundColor())
         else:
             item.setBackgroundColor(QtGui.QColor(0, 0, 0, 0))
+
+    def _set_text_color(self, item):
+        """ actives or deactivates background coloring
+        This is based on the check state of the coloring checkbox.
+        """
+        if self.coloring_checkbox.isChecked():
+            item.setForeground(
+                self._colors[self._get_level_name_from_level_value(item.record.levelno)]
+            )
+        else:
+            item.set_foreground_color(QtGui.QColor(0, 0, 0))
 
     def _get_level_name_from_level_value(self, value):
         """ a helper to retrieve the level name from the associated value """
@@ -372,7 +421,7 @@ class LogbookWidget(QtWidgets.QWidget):
             self.records_list.addItem(item)
             self._set_tooltip(item)
             self._filter(item)
-            self._set_background_color(item)
+            self._set_item_color(item)
 
         worker = Worker(_add_item)
         self._threadpool.start(worker)
