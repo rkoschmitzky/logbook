@@ -74,6 +74,7 @@ As soon as your handler was attached, the log records will be catched within a b
 | `LEVEL_VALUES`          | `dict`   | A dictionary with corresponding level numbers to the defined `LOG_LEVELS`. default: `{"debug": 10, "info": 20, "warning": 30, error: "40", "critical": 50}`.
 | `LEVEL_COLORS`          | `dict`   | A dictionary with coreresponding colors to the defined `LOG_LEVELS`. Expects RGB values from 0-255 and an optional alpha value from 0-100. default: `        "debug": (255, 255, 255, 100), "info": (204, 236, 242, 100), "warning": (152, 210, 217, 100), "error": (223, 57, 57, 100), "critical": (182, 60, 66, 100)}`
 | `INITIAL_FILTER_REGEX`  | `str`    | A regular expression that will be used when launching the logbook.
+| `INITIAL_COLORING`      | `bool`   | If `True` coloring mode will be enabled by default when launching the logbook.
 | `IGNORE_FORMATTER`      | `bool`   | If a formatter was set to the handler, it can be explicitly ignored by setting this to `True`. This means, the formatter will not be considered as the recorditem's text. Instead it will only use the `LogRecord.msg` directly.
 | `EXCEPTION_FORMATTER`   | `logging.Formatter` |  A formatter instance that will be used to format the `exc_info` tuple that will be dispayed inside the ToolTips of recorditems.
 

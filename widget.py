@@ -107,6 +107,7 @@ class LogbookWidget(QtWidgets.QWidget):
         LOG_LEVELS[4]: (182, 60, 66, 100)
     }
     INITIAL_FILTER_REGEX = r""
+    INITIAL_COLORING = False
     IGNORE_FORMATTER = False
     EXCEPTION_FORMATTER = logging.Formatter()
 
@@ -126,6 +127,11 @@ class LogbookWidget(QtWidgets.QWidget):
         self._colors = {k: QtGui.QColor(*v) for k, v in self.LEVEL_COLORS.items()}
         self._setup_ui()
         self._setup_signals()
+
+        # set other default states
+        if self.INITIAL_COLORING:
+            self.background_coloring_checkbox.setChecked(True)
+
 
     @classmethod
     def _validate_levels(cls):
