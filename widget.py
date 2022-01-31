@@ -4,10 +4,11 @@ from difflib import context_diff
 from functools import partial
 import re
 
-from Qt import (QtGui,
-                QtWidgets,
-                QtCore
-                )
+from Qt import (
+    QtGui,
+    QtWidgets,
+    QtCore
+)
 
 from .handler import LogbookHandler
 
@@ -49,6 +50,16 @@ class LogRecordItem(QtWidgets.QListWidgetItem):
         except AttributeError:
             self.setBackground(QtGui.QBrush(color))
 
+    def set_foreground_color(self, color):
+        self.setForeground(QtGui.QBrush(color))
+
+    def set_readable_foreground_color(self, background_color):
+        almost_black = QtGui.QColor(QtCore.Qt.darkGray).darker(300)
+        almost_white = QtGui.QColor(QtCore.Qt.white).darker(120)
+        self.set_foreground_color(
+            almost_black if background_color.lightnessF() > 0.3 else almost_white
+        )
+
 
 class LogRecordsListWidget(QtWidgets.QListWidget):
     """ A simple QListWidget with custom events. """
@@ -82,6 +93,21 @@ class LogRecordsListWidget(QtWidgets.QListWidget):
 class LogbookWidget(QtWidgets.QWidget):
     """ A simple widget that makes log reading more pleasant. """
 
+    class Flags:
+        # sets the `Coloring` checkbox on launch
+        INITIAL_COLORING = 2**1
+        # defines whether background color or foreground color (text) of an item will be set
+        COLORING_TEXT = 2**2
+        # if background color will be set this automatically sets a foreground color for better readability
+        READABLE_TEXT_COLOR = 2**3
+        # sets the `Ignore Case` checkbox on launch
+        RE_IGNORE_CASE = 2**4
+        # If a formatter was set to the handler, it can be explicitly ignored.
+        # This means, the formatter will not be considered as the recorditem's text.
+        # Instead it will only use the LogRecord.getMessage() directly.
+        IGNORE_FORMATTER = 2**5
+
+    FLAGS = 0
     LABEL_WIDTH = 70
     LEVEL_BUTTON_WIDTH = 60
     LOG_LEVELS = [
@@ -107,7 +133,6 @@ class LogbookWidget(QtWidgets.QWidget):
         LOG_LEVELS[4]: (182, 60, 66, 100)
     }
     INITIAL_FILTER_REGEX = r""
-    IGNORE_FORMATTER = False
     EXCEPTION_FORMATTER = logging.Formatter()
 
     _handler = LogbookHandler()
@@ -119,13 +144,42 @@ class LogbookWidget(QtWidgets.QWidget):
         # to avoid issues downstream
         self._validate_levels()
 
-        self._filter_regex = re.compile(r"{}".format(self.INITIAL_FILTER_REGEX))
+        self._filter_regex = re.compile(
+            r"{}".format(self.INITIAL_FILTER_REGEX),
+            flags=re.IGNORECASE if self._use_re_ignore_case else 0
+        )
 
         self._threadpool = QtCore.QThreadPool()
-        self._filter_regex_compiled = re.compile(self.INITIAL_FILTER_REGEX)
+        self._foreground_brush = None
         self._colors = {k: QtGui.QColor(*v) for k, v in self.LEVEL_COLORS.items()}
         self._setup_ui()
         self._setup_signals()
+
+        # set other default states
+        if self._use_coloring:
+            self.coloring_checkbox.setChecked(True)
+        if self._use_re_ignore_case:
+            self.filter_case_box.setChecked(True)
+
+    @property
+    def _use_coloring(self):
+        return (self.FLAGS & self.Flags.INITIAL_COLORING) > 0
+
+    @property
+    def _use_text_coloring(self):
+        return (self.FLAGS & self.Flags.COLORING_TEXT) > 0
+
+    @property
+    def _use_readable_text_coloring(self):
+        return (self.FLAGS & self.Flags.READABLE_TEXT_COLOR) > 0
+
+    @property
+    def _use_re_ignore_case(self):
+        return (self.FLAGS & self.Flags.RE_IGNORE_CASE) > 0
+
+    @property
+    def _ignore_formatter(self):
+        return (self.FLAGS & self.Flags.IGNORE_FORMATTER) > 0
 
     @classmethod
     def _validate_levels(cls):
@@ -246,8 +300,8 @@ class LogbookWidget(QtWidgets.QWidget):
 
         level_buttons_layout.addWidget(v_separator)
 
-        self.background_coloring_checkbox = QtWidgets.QCheckBox("Coloring")
-        level_buttons_layout.addWidget(self.background_coloring_checkbox)
+        self.coloring_checkbox = QtWidgets.QCheckBox("Coloring")
+        level_buttons_layout.addWidget(self.coloring_checkbox)
 
         level_buttons_layout.addStretch()
 
@@ -264,6 +318,9 @@ class LogbookWidget(QtWidgets.QWidget):
         self.filter_edit = QtWidgets.QLineEdit(self.INITIAL_FILTER_REGEX)
         self.filter_edit.setStyleSheet("""QWidget {border: none} """)
         filter_layout.addWidget(self.filter_edit)
+
+        self.filter_case_box = QtWidgets.QCheckBox("Ignore case")
+        filter_layout.addWidget(self.filter_case_box)
 
         records_group = QtWidgets.QGroupBox("Records")
         container_layout.addWidget(records_group)
@@ -291,8 +348,9 @@ class LogbookWidget(QtWidgets.QWidget):
                 partial(self._on_level_button_toggled, level_button)
             )
         self.clear_records_button.clicked.connect(self.records_list.clear)
-        self.background_coloring_checkbox.toggled.connect(self._toggle_coloring)
+        self.coloring_checkbox.toggled.connect(self._toggle_coloring)
         self.filter_edit.textChanged.connect(self._on_filter_changed)
+        self.filter_case_box.toggled.connect(self._on_filter_changed)
 
     def _on_level_button_toggled(self, button, state):
         """ handles show states of LogRecordItems """
@@ -300,9 +358,15 @@ class LogbookWidget(QtWidgets.QWidget):
         for item in self._record_items:
             self._filter(item)
 
-    def _on_filter_changed(self, text):
+    def _on_filter_changed(self, text_or_case):
         """ performs a regex match on all record items and filter out items that will not match """
-        self._filter_regex = re.compile(r"{}".format(text))
+
+        # as we use this as a callback on a QCheckBox state and QLineEdit text change
+        # lets always grab the information from the widgets
+        flags = re.IGNORECASE if self.filter_case_box.isChecked() else 0
+        text = self.filter_edit.text()
+
+        self._filter_regex = re.compile(r"{}".format(text), flags=flags)
         self._revert_filter_states()
         for item in self._record_items:
             self._filter(item)
@@ -314,6 +378,15 @@ class LogbookWidget(QtWidgets.QWidget):
     def _toggle_coloring(self, state):
         """ activates or deactivates background coloring for record items """
         for item in self._record_items:
+            if not self._use_text_coloring:
+                self._set_background_color(item)
+            else:
+                self._set_text_color(item)
+
+    def _set_item_color(self, item):
+        if self._use_text_coloring:
+            self._set_text_color(item)
+        else:
             self._set_background_color(item)
 
     def _set_background_color(self, item):
@@ -321,12 +394,25 @@ class LogbookWidget(QtWidgets.QWidget):
 
         This is based on the check state of the coloring checkbox.
         """
-        if self.background_coloring_checkbox.isChecked():
+        if self.coloring_checkbox.isChecked():
             item.setBackgroundColor(
                 self._colors[self._get_level_name_from_level_value(item.record.levelno)]
             )
+            if self._use_readable_text_coloring:
+                item.set_readable_foreground_color(item.backgroundColor())
         else:
             item.setBackgroundColor(QtGui.QColor(0, 0, 0, 0))
+
+    def _set_text_color(self, item):
+        """ actives or deactivates background coloring
+        This is based on the check state of the coloring checkbox.
+        """
+        if self.coloring_checkbox.isChecked():
+            item.setForeground(
+                self._colors[self._get_level_name_from_level_value(item.record.levelno)]
+            )
+        else:
+            item.setForeground(self._foreground_brush)
 
     def _get_level_name_from_level_value(self, value):
         """ a helper to retrieve the level name from the associated value """
@@ -357,16 +443,19 @@ class LogbookWidget(QtWidgets.QWidget):
 
         def _add_item():
 
-            if self.IGNORE_FORMATTER:
+            if self._ignore_formatter:
                 formatter = None
             else:
                 formatter = self.handler.formatter
 
             item = LogRecordItem(log_record, formatter)
+            # there is likely a better way to revert back to the initial brush/color of an item
+            # but for now lets store it before we apply any color change
+            self._foreground_brush = self._foreground_brush or item.foreground()
             self.records_list.addItem(item)
             self._set_tooltip(item)
             self._filter(item)
-            self._set_background_color(item)
+            self._set_item_color(item)
 
         worker = Worker(_add_item)
         self._threadpool.start(worker)
