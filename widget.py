@@ -139,6 +139,7 @@ class LogbookWidget(QtWidgets.QWidget):
         self._filter_regex = re.compile(r"{}".format(self.INITIAL_FILTER_REGEX))
 
         self._threadpool = QtCore.QThreadPool()
+        self._foreground_brush = None
         self._filter_regex_compiled = re.compile(self.INITIAL_FILTER_REGEX)
         self._colors = {k: QtGui.QColor(*v) for k, v in self.LEVEL_COLORS.items()}
         self._setup_ui()
@@ -381,7 +382,7 @@ class LogbookWidget(QtWidgets.QWidget):
                 self._colors[self._get_level_name_from_level_value(item.record.levelno)]
             )
         else:
-            item.set_foreground_color(QtGui.QColor(0, 0, 0))
+            item.setForeground(self._foreground_brush)
 
     def _get_level_name_from_level_value(self, value):
         """ a helper to retrieve the level name from the associated value """
@@ -418,6 +419,9 @@ class LogbookWidget(QtWidgets.QWidget):
                 formatter = self.handler.formatter
 
             item = LogRecordItem(log_record, formatter)
+            # there is likely a better way to revert back to the initial brush/color of an item
+            # but for now lets store it before we apply any color change
+            self._foreground_brush = self._foreground_brush or item.foreground()
             self.records_list.addItem(item)
             self._set_tooltip(item)
             self._filter(item)
