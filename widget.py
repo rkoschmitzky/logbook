@@ -97,6 +97,7 @@ class LogbookWidget(QtWidgets.QWidget):
         INITIAL_COLORING = 2**1
         COLORING_TEXT = 2**2
         READABLE_TEXT_COLOR = 2**3
+        RE_IGNORE_CASE = 2**4
 
     FLAGS = 0
     LABEL_WIDTH = 70
@@ -136,11 +137,13 @@ class LogbookWidget(QtWidgets.QWidget):
         # to avoid issues downstream
         self._validate_levels()
 
-        self._filter_regex = re.compile(r"{}".format(self.INITIAL_FILTER_REGEX))
+        self._filter_regex = re.compile(
+            r"{}".format(self.INITIAL_FILTER_REGEX),
+            flags=re.IGNORECASE if self._use_re_ignore_case else 0
+        )
 
         self._threadpool = QtCore.QThreadPool()
         self._foreground_brush = None
-        self._filter_regex_compiled = re.compile(self.INITIAL_FILTER_REGEX)
         self._colors = {k: QtGui.QColor(*v) for k, v in self.LEVEL_COLORS.items()}
         self._setup_ui()
         self._setup_signals()
@@ -148,6 +151,8 @@ class LogbookWidget(QtWidgets.QWidget):
         # set other default states
         if self._use_coloring:
             self.coloring_checkbox.setChecked(True)
+        if self._use_re_ignore_case:
+            self.filter_case_box.setChecked(True)
 
     @property
     def _use_coloring(self):
@@ -160,6 +165,10 @@ class LogbookWidget(QtWidgets.QWidget):
     @property
     def _use_readable_text_coloring(self):
         return (self.FLAGS & self.Flags.READABLE_TEXT_COLOR) > 0
+
+    @property
+    def _use_re_ignore_case(self):
+        return (self.FLAGS & self.Flags.RE_IGNORE_CASE) > 0
 
     @classmethod
     def _validate_levels(cls):
@@ -299,6 +308,9 @@ class LogbookWidget(QtWidgets.QWidget):
         self.filter_edit.setStyleSheet("""QWidget {border: none} """)
         filter_layout.addWidget(self.filter_edit)
 
+        self.filter_case_box = QtWidgets.QCheckBox("Ignore case")
+        filter_layout.addWidget(self.filter_case_box)
+
         records_group = QtWidgets.QGroupBox("Records")
         container_layout.addWidget(records_group)
 
@@ -327,6 +339,7 @@ class LogbookWidget(QtWidgets.QWidget):
         self.clear_records_button.clicked.connect(self.records_list.clear)
         self.coloring_checkbox.toggled.connect(self._toggle_coloring)
         self.filter_edit.textChanged.connect(self._on_filter_changed)
+        self.filter_case_box.toggled.connect(self._on_filter_changed)
 
     def _on_level_button_toggled(self, button, state):
         """ handles show states of LogRecordItems """
@@ -334,9 +347,15 @@ class LogbookWidget(QtWidgets.QWidget):
         for item in self._record_items:
             self._filter(item)
 
-    def _on_filter_changed(self, text):
+    def _on_filter_changed(self, text_or_case):
         """ performs a regex match on all record items and filter out items that will not match """
-        self._filter_regex = re.compile(r"{}".format(text))
+
+        # as we use this as a callback on a QCheckBox state and QLineEdit text change
+        # lets always grab the information from the widgets
+        flags = re.IGNORECASE if self.filter_case_box.isChecked() else 0
+        text = self.filter_edit.text()
+
+        self._filter_regex = re.compile(r"{}".format(text), flags=flags)
         self._revert_filter_states()
         for item in self._record_items:
             self._filter(item)
