@@ -94,10 +94,18 @@ class LogbookWidget(QtWidgets.QWidget):
     """ A simple widget that makes log reading more pleasant. """
 
     class Flags:
+        # sets the `Coloring` checkbox on launch
         INITIAL_COLORING = 2**1
+        # defines whether background color or foreground color (text) of an item will be set
         COLORING_TEXT = 2**2
+        # if background color will be set this automatically sets a foreground color for better readability
         READABLE_TEXT_COLOR = 2**3
+        # sets the `Ignore Case` checkbox on launch
         RE_IGNORE_CASE = 2**4
+        # If a formatter was set to the handler, it can be explicitly ignored.
+        # This means, the formatter will not be considered as the recorditem's text.
+        # Instead it will only use the LogRecord.getMessage() directly.
+        IGNORE_FORMATTER = 2**5
 
     FLAGS = 0
     LABEL_WIDTH = 70
@@ -125,7 +133,6 @@ class LogbookWidget(QtWidgets.QWidget):
         LOG_LEVELS[4]: (182, 60, 66, 100)
     }
     INITIAL_FILTER_REGEX = r""
-    IGNORE_FORMATTER = False
     EXCEPTION_FORMATTER = logging.Formatter()
 
     _handler = LogbookHandler()
@@ -169,6 +176,10 @@ class LogbookWidget(QtWidgets.QWidget):
     @property
     def _use_re_ignore_case(self):
         return (self.FLAGS & self.Flags.RE_IGNORE_CASE) > 0
+
+    @property
+    def _ignore_formatter(self):
+        return (self.FLAGS & self.Flags.IGNORE_FORMATTER) > 0
 
     @classmethod
     def _validate_levels(cls):
@@ -432,7 +443,7 @@ class LogbookWidget(QtWidgets.QWidget):
 
         def _add_item():
 
-            if self.IGNORE_FORMATTER:
+            if self._ignore_formatter:
                 formatter = None
             else:
                 formatter = self.handler.formatter
